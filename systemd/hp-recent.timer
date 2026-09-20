@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the honeypot recent-arrivals feed every 10 seconds
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=10s
+# Without a tight accuracy systemd coalesces short timers with other wakeups
+# and the feed lands in bursts, which is exactly what it must not do.
+AccuracySec=1s
+[Install]
+WantedBy=timers.target

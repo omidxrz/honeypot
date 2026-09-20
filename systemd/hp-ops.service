@@ -1,0 +1,15 @@
+[Unit]
+Description=Honeypot operator panel (loopback only)
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/honeypot/ops
+ExecStart=/usr/bin/python3 -m http.server 8085 --bind 127.0.0.1
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

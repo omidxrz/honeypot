@@ -1,0 +1,77 @@
+# Local demo: run the sensor on your own machine to look at the panel and the
+# decoy. Works on macOS and Windows too, where the production profile cannot.
+#
+#   sh ops/vendor-assets.sh && sh ops/vendor-geo.sh
+#   cp etc/names.env.example etc/names.env
+#   docker compose -f docker-compose.demo.yml up --build
+#   open http://127.0.0.1:8095                                # operator panel
+#   curl -H 'Host: ops.example.com' http://127.0.0.1:8090/    # feed it something
+#   printf 'root\n' | nc 127.0.0.1 2323                       # and a raw port
+#
+# This is NOT a honeypot deployment. Everything here binds 127.0.0.1 only, so
+# nothing is reachable from your network, and that is deliberate: a decoy admin
+# console on a laptop collects nothing and is a liability on a shared network.
+#
+# What it cannot show you, by construction:
+#
+#   * the all-port catch-all. That needs the host's nftables redirect plus
+#     SO_ORIGINAL_DST, so only the handful of ports published below arrive.
+#     catchall.py falls back to the socket's own address here, so `dport` is
+#     the port you hit rather than null.
+#   * a Contact. A Contact is an Actor reaching the sensor by a Name it learned
+#     from a Certificate Transparency log. Nothing here is in a CT log, and
+#     loopback is excluded from the Actor population by definition -- so the
+#     Contact count stays 0 no matter what you send it. That is the metric
+#     working, not the demo being broken.
+services:
+  honeypot:
+    build: .
+    image: honeypot:local
+    container_name: honeypot-demo
+    restart: "no"
+
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE, CHOWN, SETUID, SETGID, DAC_OVERRIDE]
+
+    ports:
+      # Every binding is explicitly 127.0.0.1. Dropping that prefix publishes a
+      # fake admin console on every interface your machine has.
+      #
+      # Not 8085 and not 8080: 8085 is the port the SSH forward to a real
+      # sensor uses, and pointing them at the same place is how you end up
+      # reading production data and thinking it is the demo. 8080 is busy on
+      # most developer machines anyway. Override with HP_DEMO_*_PORT.
+      - "127.0.0.1:${HP_DEMO_PANEL_PORT:-8095}:8085"   # operator panel
+      - "127.0.0.1:${HP_DEMO_SITE_PORT:-8090}:80"      # decoy site
+      # A few of the ports the catch-all would otherwise see on a real host:
+      # telnet, SSH, MySQL, VNC -- the top of the live distribution.
+      - "127.0.0.1:2323:23"
+      - "127.0.0.1:2222:22"
+      - "127.0.0.1:3307:3306"
+      - "127.0.0.1:5901:5900"
+
+    volumes:
+      - hp-demo-logs:/opt/honeypot/logs
+      - hp-demo-ops:/opt/honeypot/ops
+      - ./ops/assets:/opt/honeypot/ops/assets:ro
+      - ./ops/geo:/opt/honeypot/ops/geo:ro
+      - ./etc/names.env:/opt/honeypot/names.env:ro
+      - ./bait:/opt/honeypot/bait
+
+    environment:
+      # Published ports reach the container on its bridge address, not its
+      # loopback, so the panel has to bind 0.0.0.0 INSIDE the container. It is
+      # still only reachable from your machine's loopback, because the port
+      # binding above says 127.0.0.1. Both halves are required.
+      HP_PANEL_BIND: "0.0.0.0"
+      # Faster than production so the panel fills in while you are watching.
+      HP_ROLLUP_EVERY: "20"
+      # With no nftables redirect, nothing would ever arrive on 8000. The
+      # catch-all listens on these directly instead, so the ports published
+      # above actually answer and `dport` is the real port rather than 8000
+      # for everything. On the sensor this is unset and it binds 8000 alone.
+      HP_BIND_PORTS: "8000,23,22,3306,5900"
+
+volumes:
+  hp-demo-logs:
+  hp-demo-ops:

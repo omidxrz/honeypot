@@ -1,0 +1,68 @@
+# Production: an internet-facing sensor on a dedicated Linux host.
+#
+#   docker compose up -d --build
+#
+# Read the README's "Rules that keep this safe" before this is reachable from
+# the internet. This host will be scanned within minutes and is built to be
+# compromised; nothing on it should work anywhere else.
+#
+# network_mode: host is not a shortcut, it is a requirement. The catch-all
+# recovers the port a client actually aimed at with SO_ORIGINAL_DST, which only
+# answers for a connection the host's own nftables redirect put there. In a
+# bridge network there is no redirect and no way to publish 65,535 ports, so
+# the sensor's entire premise -- every port, one listener -- does not work.
+#
+# The trade-off that buys: the container shares the host's network namespace,
+# so this isolates the filesystem, not the network. Use a dedicated host.
+services:
+  honeypot:
+    build: .
+    image: honeypot:local
+    container_name: honeypot
+    network_mode: host
+    restart: unless-stopped
+
+    # No NET_ADMIN: the firewall is the host's, on purpose. See Dockerfile.
+    cap_drop: [ALL]
+    cap_add:
+      - NET_BIND_SERVICE   # nginx on 80/443
+      - CHOWN              # nginx dropping its workers to www-data
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+
+    volumes:
+      # The capture. This is the only thing here that cannot be recreated.
+      - ./logs:/opt/honeypot/logs
+
+      # state.json (the forward-only accumulator) plus the generated
+      # stats.json / recent.json the panel fetches. state.json is never
+      # recomputed from the logs, so losing this volume silently resets the
+      # observation window and every total -- back it up, not just the logs.
+      - hp-ops:/opt/honeypot/ops
+
+      # Gitignored third-party build output -- not in the image, because a
+      # clone does not have it. Run vendor-assets.sh / vendor-geo.sh first.
+      # Nested inside the volume above; the more specific mount wins.
+      - ./ops/assets:/opt/honeypot/ops/assets:ro
+      - ./ops/geo:/opt/honeypot/ops/geo:ro
+
+      # The Names this sensor answers to. Single source of truth.
+      - ./etc/names.env:/opt/honeypot/names.env:ro
+
+      # The decoy site. Not committed (ADR-0006); the entrypoint writes a
+      # placeholder if this is absent so ACME still has a webroot.
+      - ./bait:/opt/honeypot/bait
+
+      # Issued on the HOST with hp-cert, read here. Read-only: the container
+      # has no business holding a writable handle on the private key.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    environment:
+      # Host networking means this binds the host's loopback directly, which is
+      # what the `ssh -L 8085` workflow already expects. Do not make it
+      # 0.0.0.0 -- the panel shows real captured addresses and payloads.
+      HP_PANEL_BIND: "127.0.0.1"
+
+volumes:
+  hp-ops:

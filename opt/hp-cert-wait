@@ -1,0 +1,17 @@
+#!/bin/sh
+# Poll DNS for up to 2h, issue the cert the moment the A record lands. Logs to /opt/honeypot/logs/cert.log
+D="$1"; [ -n "$D" ] || exit 2
+LOG=/opt/honeypot/logs/cert.log
+MINE=$(ip -4 -o addr show scope global | awk '{split($4,a,"/"); print a[1]; exit}')
+i=0
+while [ $i -lt 120 ]; do
+  GOT=$(getent hosts "$D" | awk '{print $1; exit}')
+  if [ "$GOT" = "$MINE" ]; then
+    echo "$(date -Is) $D resolved, issuing" >> $LOG
+    /usr/local/sbin/hp-cert "$D" >> $LOG 2>&1
+    echo "$(date -Is) exit $?" >> $LOG
+    exit 0
+  fi
+  i=$((i+1)); sleep 60
+done
+echo "$(date -Is) gave up waiting for $D" >> $LOG

@@ -1,0 +1,5 @@
+[Unit]
+Description=Renew honeypot certificate through a temporary egress window
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/usr/local/sbin/hp-egress open >/dev/null; /usr/bin/certbot renew --webroot -w /opt/honeypot/bait --quiet; rc=$?; /usr/local/sbin/hp-egress close >/dev/null; systemctl reload nginx; exit 0'

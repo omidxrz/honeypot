@@ -1,0 +1,34 @@
+#!/bin/sh
+# hp-cert <domain> [extra-domain ...]   Issue a Let's Encrypt cert so the host lands in Certificate Transparency.
+# Opens the outbound window only for the ACME exchange, then closes it again.
+set -e
+[ -n "$1" ] || { echo "usage: hp-cert ops.example.com [www.example.com ...]"; exit 2; }
+
+PRIMARY="$1"
+ARGS=""
+for d in "$@"; do ARGS="$ARGS -d $d"; done
+
+for d in "$@"; do
+  got=$(getent hosts "$d" | awk '{print $1; exit}')
+  mine=$(ip -4 -o addr show scope global | awk '{split($4,a,"/"); print a[1]; exit}')
+  [ "$got" = "$mine" ] || { echo "DNS: $d -> ${got:-nothing}, expected $mine. Fix the A record first."; exit 1; }
+done
+
+hp-egress open >/dev/null
+trap 'hp-egress close >/dev/null' EXIT INT TERM
+
+# --cert-name pins the lineage, so LIVE below is always the right directory;
+# without it a re-issue can land in <name>-0001 and nginx keeps the old cert.
+certbot certonly --webroot -w /opt/honeypot/bait \
+  --non-interactive --agree-tos --register-unsafely-without-email \
+  --cert-name "$PRIMARY" --keep-until-expiring $ARGS
+
+LIVE="/etc/letsencrypt/live/$PRIMARY"
+CONF=/etc/nginx/sites-available/honeypot
+sed -i "s#ssl_certificate .*#ssl_certificate     $LIVE/fullchain.pem;#; s#ssl_certificate_key .*#ssl_certificate_key $LIVE/privkey.pem;#" "$CONF"
+# Rewrite whatever name is there, not just the placeholder: this runs again
+# every time a Bait Name is retired and replaced.
+sed -i "s#^\( *\)server_name .*#\1server_name $PRIMARY _;#" "$CONF"
+nginx -t && systemctl reload nginx
+echo "issued for: $*"
+echo "CT: https://crt.sh/?q=$PRIMARY"

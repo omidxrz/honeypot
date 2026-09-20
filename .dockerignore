@@ -1,0 +1,32 @@
+# Keep the build context small and, more importantly, keep captured data and
+# live config out of an image that might get pushed somewhere.
+.git
+.gitignore
+
+# Never in an image: the capture, the accumulated state, the real Names, the
+# TLS keys. ops/assets and ops/geo are excluded too -- they are mounted by
+# compose rather than baked in, so a clone without them fails loudly at
+# startup instead of shipping a panel with no stylesheet.
+logs/
+ops/state.json
+ops/stats.json
+ops/recent.json
+ops/assets/
+ops/geo/
+etc/names.env
+etc/nginx-hostmap.conf
+credentials.json
+*.pem
+*.key
+*.bak
+
+# Not used at runtime.
+bait/
+docs/
+node_modules/
+__pycache__/
+*.pyc
+README.md
+AGENTS.md
+CONTEXT.md
+docker-compose*.yml

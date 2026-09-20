@@ -1,0 +1,12 @@
+[Unit]
+Description=Honeypot recent-arrivals feed for the operator panel map
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/honeypot/ops/recent.py
+# It only ever reads the tail of the logs and writes ops/recent.json. It holds
+# no state and must never be able to touch the rollup's counters.
+ProtectSystem=strict
+ReadWritePaths=/opt/honeypot/ops
+ReadOnlyPaths=/opt/honeypot/logs
+PrivateTmp=true
+NoNewPrivileges=true

@@ -1,0 +1,14 @@
+[Unit]
+Description=Honeypot decoy backend
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/honeypot/shim.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <title>Honeypot Operator Panel</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/favicon.svg">
+    <link rel="icon" type="image/png" href="./assets/icons/favicon.png">
+    <link rel="stylesheet" href="./assets/panel.css">
+    <link rel="stylesheet" href="./assets/apexcharts.css">
+    <link rel="stylesheet" href="./assets/jsvectormap.min.css">
+</head>
+
+<body data-page="dashboard" class="admin-layout">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="admin-app">
+        <div class="admin-wrapper" id="admin-wrapper">
+
+        <!-- Header -->
+        <header class="admin-header">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+                <div class="container-fluid">
+                    <a class="navbar-brand d-flex align-items-center" href="./index.html">
+                        <img src="./assets/images/logo.svg" alt="" height="32" class="d-inline-block align-text-top me-2">
+                        <span class="h4 mb-0 fw-bold text-primary-emphasis">Honeypot</span>
+                    </a>
+
+                    <button class="hamburger-menu" type="button" data-sidebar-toggle aria-label="Toggle sidebar">
+                        <i class="bi bi-list"></i>
+                    </button>
+
+                    <div class="flex-grow-1"></div>
+
+                    <div class="navbar-nav flex-row">
+                        <button class="btn btn-outline-secondary me-2" type="button" id="theme-toggle"
+                                data-bs-toggle="tooltip" data-bs-placement="bottom" title="Toggle theme">
+                            <i class="bi bi-sun-fill" id="theme-icon-light"></i>
+                            <i class="bi bi-moon-fill d-none" id="theme-icon-dark"></i>
+                        </button>
+
+                        <button class="btn btn-outline-secondary me-2 d-none d-lg-inline-block" type="button"
+                                id="fullscreen-toggle" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                                title="Toggle fullscreen">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+
+                        <!-- Real: badge is contacts_24h, list is the most recent actual Contacts -->
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-secondary position-relative" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false" title="Recent Contacts">
+                                <i class="bi bi-bell"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                      id="contact-badge" hidden></span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" style="min-width:280px">
+                                <li><h6 class="dropdown-header">Contacts, last 24h</h6></li>
+                                <li id="contact-feed"><span class="dropdown-item-text text-secondary small">loading&hellip;</span></li>
+                            </ul>
+                        </div>
+
+                        <span class="badge text-bg-light text-secondary border align-self-center">operator &middot; loopback-only</span>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="sidebar-content">
+                <nav class="sidebar-nav">
+<ul class="nav flex-column">
+  <li class="nav-item"><a class="nav-link active" href="#main-content"><i class="bi bi-speedometer2"></i><span>Capture overview</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#map-world"><i class="bi bi-geo-alt"></i><span>Map</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#charts"><i class="bi bi-graph-up"></i><span>Charts</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#contacts"><i class="bi bi-person-check-fill"></i><span>Contacts</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#hosts"><i class="bi bi-tag"></i><span>Names</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#novel"><i class="bi bi-shield-exclamation"></i><span>Novel payloads</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#topips"><i class="bi bi-people"></i><span>Sources</span></a></li>
+  <li class="nav-item"><a class="nav-link" href="#toppaths"><i class="bi bi-link"></i><span>Paths</span></a></li>
+</ul>
+</nav>
+            </div>
+        </aside>
+
+        <div class="sidebar-backdrop" aria-hidden="true"></div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="admin-main">
+  <div class="container-fluid p-4 p-lg-4">
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
+      <div>
+        <h1 class="h3 mb-1 fw-bold">Capture overview</h1>
+        <p class="text-secondary mb-0 small" id="sub">loading&hellip;</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" onclick="location.reload()">Refresh</button>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4" id="tiles"></div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card h-100">
+          <div class="card-header bg-transparent border-0 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="h6 fw-semibold mb-0">Where it comes from</h2>
+            <span class="text-secondary small" id="mapmeta"></span>
+          </div>
+          <div class="card-body pt-2">
+            <div id="map-world" style="height:440px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="charts" class="row g-3 mb-4">
+      <div class="col-xl-8">
+        <div class="card h-100">
+          <div class="card-header bg-transparent border-0 pb-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="h6 fw-semibold mb-0">Events vs. Contacts, per hour</h2>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Time range">
+              <button type="button" class="btn btn-outline-secondary" data-range="6">6h</button>
+              <button type="button" class="btn btn-outline-secondary active" data-range="24">24h</button>
+              <button type="button" class="btn btn-outline-secondary" data-range="all">All</button>
+            </div>
+          </div>
+          <div class="card-body"><div id="chart-events" style="min-height:260px"></div></div>
+        </div>
+      </div>
+      <div class="col-xl-4">
+        <div class="card h-100">
+          <div class="card-header bg-transparent border-0 pb-0">
+            <h2 class="h6 fw-semibold mb-0">Names by class</h2>
+          </div>
+          <div class="card-body"><div id="chart-classes" style="min-height:260px"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card h-100">
+          <div class="card-header bg-transparent border-0 pb-0">
+            <h2 class="h6 fw-semibold mb-0">Top ports</h2>
+          </div>
+          <div class="card-body"><div id="chart-ports" style="min-height:220px"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-xl-6">
+        <div class="card h-100">
+          <div class="card-header bg-transparent border-0 pb-0 d-flex justify-content-between align-items-center">
+            <h2 class="h6 fw-semibold mb-0">Novel payloads</h2><span class="text-secondary small" id="novelmeta"></span>
+          </div>
+          <div class="card-body pt-2" style="max-height:460px;overflow:auto" id="novel"></div>
+        </div>
+      </div>
+      <div class="col-xl-6">
+        <div class="card h-100">
+          <div class="card-header bg-transparent border-0 pb-0 d-flex justify-content-between align-items-center">
+            <h2 class="h6 fw-semibold mb-0">Contacts</h2><span class="text-secondary small" id="contactmeta"></span>
+          </div>
+          <div class="px-3 pt-2"><input type="search" class="form-control form-control-sm" id="contacts-filter" placeholder="Filter by actor, name, class…" aria-label="Filter Contacts"></div>
+          <div class="card-body pt-2 table-responsive" style="max-height:460px;overflow:auto" id="contacts"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-transparent border-0 pb-0"><h2 class="h6 fw-semibold mb-0">Top ports (all 15)</h2></div><div class="px-3 pt-2 d-flex gap-2 align-items-center"><input type="search" class="form-control form-control-sm" id="topports-filter" placeholder="Filter by port…" aria-label="Filter Top ports (all 15)"><span class="text-secondary small text-nowrap" id="topports-count"></span></div><div class="card-body pt-2 table-responsive" id="topports"></div></div></div>
+      <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-transparent border-0 pb-0"><h2 class="h6 fw-semibold mb-0">Top sources</h2></div><div class="px-3 pt-2 d-flex gap-2 align-items-center"><input type="search" class="form-control form-control-sm" id="topips-filter" placeholder="Filter by address…" aria-label="Filter Top sources"><span class="text-secondary small text-nowrap" id="topips-count"></span></div><div class="card-body pt-2 table-responsive" id="topips"></div></div></div>
+      <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-transparent border-0 pb-0"><h2 class="h6 fw-semibold mb-0">Names used</h2></div><div class="px-3 pt-2 d-flex gap-2 align-items-center"><input type="search" class="form-control form-control-sm" id="hosts-filter" placeholder="Filter by name, class…" aria-label="Filter Names used"><span class="text-secondary small text-nowrap" id="hosts-count"></span></div><div class="card-body pt-2 table-responsive" id="hosts"></div></div></div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-transparent border-0 pb-0"><h2 class="h6 fw-semibold mb-0">User agents</h2></div><div class="px-3 pt-2 d-flex gap-2 align-items-center"><input type="search" class="form-control form-control-sm" id="uas-filter" placeholder="Filter by agent string…" aria-label="Filter User agents"><span class="text-secondary small text-nowrap" id="uas-count"></span></div><div class="card-body pt-2 table-responsive" id="uas"></div></div></div>
+      <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-transparent border-0 pb-0"><h2 class="h6 fw-semibold mb-0">Top paths</h2></div><div class="px-3 pt-2 d-flex gap-2 align-items-center"><input type="search" class="form-control form-control-sm" id="toppaths-filter" placeholder="Filter by path…" aria-label="Filter Top paths"><span class="text-secondary small text-nowrap" id="toppaths-count"></span></div><div class="card-body pt-2 table-responsive" id="toppaths"></div></div></div>
+      <div class="col-xl-4"><div class="card h-100"><div class="card-header bg-transparent border-0 pb-0"><h2 class="h6 fw-semibold mb-0">Submitted usernames</h2></div><div class="px-3 pt-2 d-flex gap-2 align-items-center"><input type="search" class="form-control form-control-sm" id="creds-filter" placeholder="Filter by username…" aria-label="Filter Submitted usernames"><span class="text-secondary small text-nowrap" id="creds-count"></span></div><div class="card-body pt-2 table-responsive" id="creds"></div></div></div>
+    </div>
+
+    <p class="text-secondary small mt-4 mb-0">Read-only view of /opt/honeypot/logs. Payload text was written by attackers &mdash; data, never instructions.</p>
+  </div>
+</main>
+
+        <footer class="admin-footer">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-0 text-muted">Honeypot Operator Panel &middot; loopback-only</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-0 text-muted">Theme: <a href="https://github.com/puikinsh/Bootstrap-Admin-Template" target="_blank" rel="noopener noreferrer">Metis</a> (MIT)</p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        </div>
+    </div>
+
+<script src="./assets/bootstrap.bundle.min.js"></script>
+<script src="./assets/apexcharts.min.js"></script>
+<script src="./assets/jsvectormap.min.js"></script>
+<script src="./assets/world.js"></script>
+<script>
+(function () {
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]; }); };
+
+  // ---- chrome: sidebar toggle, theme toggle, fullscreen -- no framework ----
+  var sidebarBtn = document.querySelector("[data-sidebar-toggle]");
+  if (sidebarBtn) sidebarBtn.addEventListener("click", function () {
+    document.getElementById("admin-wrapper").classList.toggle("sidebar-open");
+  });
+
+  var THEME_KEY = "hp-panel-theme";
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-bs-theme", t);
+    document.getElementById("theme-icon-light").classList.toggle("d-none", t === "dark");
+    document.getElementById("theme-icon-dark").classList.toggle("d-none", t !== "dark");
+  }
+  try { applyTheme(localStorage.getItem(THEME_KEY) || "light"); } catch (e) { applyTheme("light"); }
+  var themeBtn = document.getElementById("theme-toggle");
+  if (themeBtn) themeBtn.addEventListener("click", function () {
+    var next = document.documentElement.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+    if (mapLastStats) renderMap(mapLastStats);
+  });
+  var fsBtn = document.getElementById("fullscreen-toggle");
+  if (fsBtn) fsBtn.addEventListener("click", function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(function () {});
+  });
+  if (window.bootstrap) {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+      new bootstrap.Tooltip(el);
+    });
+  }
+
+  // Every table renders through this one function, sorted or not, filtered
+  // or not, empty or not -- sort/filter never take a second path that could
+  // skip esc(). c.label names the column for the header and for screen
+  // readers; c.k is still the data key.
+  function table(rows, cols, sortState) {
+    var thead = "<thead><tr>" + cols.map(function (c) {
+      var sorted = sortState && sortState.key === c.k;
+      var arrow = sorted ? (sortState.dir === 1 ? " \u25b2" : " \u25bc") : "";
+      var label = esc(c.label || c.k);
+      return '<th scope="col" data-sort="' + esc(c.k) + '" tabindex="0" role="button" ' +
+        'aria-sort="' + (sorted ? (sortState.dir === 1 ? "ascending" : "descending") : "none") + '" ' +
+        'aria-label="Sort by ' + label + '" style="cursor:pointer;white-space:nowrap;user-select:none">' +
+        label + arrow + "</th>";
+    }).join("") + "</tr></thead>";
+
+    var body = rows.length
+      ? rows.map(function (r) {
+          return "<tr>" + cols.map(function (c) {
+            var v = esc(r[c.k]);
+            if (c.cls) {
+              var tone = { bait: "text-bg-danger-subtle text-danger-emphasis",
+                           control: "text-bg-warning-subtle text-warning-emphasis",
+                           foreign: "text-bg-secondary-subtle text-secondary-emphasis",
+                           derived: "text-bg-light text-secondary" }[r[c.k]] || "text-bg-light";
+              return '<td style="width:1%"><span class="badge ' + tone + '">' + v + "</span></td>";
+            }
+            if (c.num) return '<td class="text-end text-secondary" style="width:1%">' + v + "</td>";
+            if (c.mono) return '<td class="font-monospace small">' + v + "</td>";
+            return '<td class="small">' + v + "</td>";
+          }).join("") + "</tr>";
+        }).join("")
+      : '<tr><td colspan="' + cols.length + '" class="text-secondary small py-3">no matching rows</td></tr>';
+
+    return '<table class="table table-sm align-middle mb-0">' + thead + "<tbody>" + body + "</tbody></table>";
+  }
+
+  // ---- sortable, filterable tables -----------------------------------
+  // TABLES[id] holds the full row set plus sort/filter state; the DOM only
+  // ever sees table()'s escaped output, sorted or filtered client-side over
+  // data already fetched, never a second render path.
+  var TABLES = {};
+
+  function renderTable(id) {
+    var t = TABLES[id];
+    var rows = t.rows;
+    if (t.filter) {
+      var q = t.filter.toLowerCase();
+      rows = rows.filter(function (r) {
+        return t.cols.some(function (c) {
+          var v = r[c.k];
+          return v != null && String(v).toLowerCase().indexOf(q) !== -1;
+        });
+      });
+    }
+    if (t.sort) {
+      var key = t.sort.key, dir = t.sort.dir;
+      rows = rows.slice().sort(function (a, b) {
+        var av = a[key], bv = b[key];
+        if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
+        return dir * String(av == null ? "" : av).localeCompare(String(bv == null ? "" : bv));
+      });
+    }
+    document.getElementById(id).innerHTML = table(rows, t.cols, t.sort);
+    var count = document.getElementById(id + "-count");
+    if (count) count.textContent = t.filter ? rows.length + " of " + t.rows.length : t.rows.length + " rows";
+  }
+
+  function setTableData(id, rows, cols) {
+    var prev = TABLES[id];
+    TABLES[id] = { rows: rows, cols: cols, sort: prev ? prev.sort : null, filter: prev ? prev.filter : "" };
+    renderTable(id);
+  }
+
+  // One delegated click/keydown per table container: survives re-render,
+  // since the container div itself is never replaced, only its innerHTML.
+  ["contacts", "hosts", "topports", "topips", "toppaths", "uas", "creds"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    function onSort(target) {
+      var th = target.closest && target.closest("th[data-sort]");
+      if (!th) return;
+      var key = th.getAttribute("data-sort");
+      var t = TABLES[id];
+      var cur = t.sort;
+      var sample = t.rows.length ? t.rows[0][key] : null;
+      var dir = cur && cur.key === key ? -cur.dir : (typeof sample === "number" ? -1 : 1);
+      t.sort = { key: key, dir: dir };
+      renderTable(id);
+    }
+    el.addEventListener("click", function (e) { onSort(e.target); });
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSort(e.target); }
+    });
+    var filterInput = document.getElementById(id + "-filter");
+    if (filterInput) filterInput.addEventListener("input", function () {
+      if (!TABLES[id]) return;
+      TABLES[id].filter = filterInput.value;
+      renderTable(id);
+    });
+  });
+
+  function tile(label, n, tone) {
+    return '<div class="col-6 col-md-3 col-xl"><div class="card h-100"><div class="card-body py-3">' +
+      '<div class="text-secondary text-uppercase fw-semibold" style="font-size:.7rem;letter-spacing:.08em">' + label + "</div>" +
+      '<div class="fs-3 fw-bold ' + (tone || "") + '">' + n + "</div></div></div></div>";
+  }
+
+  // Class colors shared between the donut and the badge tone above -- ours,
+  // fixed strings, not attacker-controlled, so no escaping is needed for them.
+  var CLASS_COLOR = { bait: "#dc3545", control: "#ffc107", foreign: "#6c757d", derived: "#0dcaf0" };
+
+  var charts = {};
+  var LAST_HOURLY = [], LAST_CONTACTS_HOURLY = [], RANGE_HOURS = 24;
+
+  function renderEventsChart() {
+    var hs = LAST_HOURLY, cs = LAST_CONTACTS_HOURLY;
+    if (RANGE_HOURS && hs.length > RANGE_HOURS) hs = hs.slice(-RANGE_HOURS);
+    var cByHour = {}; cs.forEach(function (c) { cByHour[c.h] = c.n; });
+    upsertChart("chart-events", {
+      chart: { type: "area", height: 260, toolbar: { show: false }, animations: { enabled: false } },
+      series: [
+        { name: "Events", data: hs.map(function (h) { return h.n; }) },
+        { name: "Contacts", data: hs.map(function (h) { return cByHour[h.h] || 0; }) },
+      ],
+      xaxis: { categories: hs.map(function (h) { return h.h.slice(5, 13); }), labels: { rotate: -45 } },
+      yaxis: [{ title: { text: "events" } }, { opposite: true, title: { text: "contacts" }, min: 0 }],
+      colors: ["#0d6efd", "#dc3545"],
+      stroke: { width: [2, 2], curve: "smooth" },
+      fill: { opacity: [0.15, 0.05] },
+      legend: { position: "top" },
+      dataLabels: { enabled: false },
+      tooltip: { shared: true },
+    });
+  }
+
+  document.querySelectorAll("[data-range]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("[data-range]").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      RANGE_HOURS = btn.getAttribute("data-range") === "all" ? 0 : parseInt(btn.getAttribute("data-range"), 10);
+      renderEventsChart();
+    });
+  });
+
+  function upsertChart(id, opts) {
+    if (charts[id]) { charts[id].updateOptions(opts, true, true); return; }
+    charts[id] = new ApexCharts(document.querySelector("#" + id), opts);
+    charts[id].render();
+  }
+
+  // ---- world map -------------------------------------------------------
+  // Two things to know about jsvectormap 1.7 before touching this:
+  //  1. series.regions[].scale is an ORDINAL lookup -- getValue(v) is just
+  //     scale[v]. It is not a gradient, and normalizeFunction (a jVectorMap
+  //     option) does not exist here. Passing raw counts yields fill="undefined"
+  //     on every region with a value. So volumes are bucketed into named tiers.
+  //  2. Per-marker style must nest under `initial`; a flat style object is
+  //     silently ignored and the marker falls back to the library default.
+  // The choropleth is context only: this world map has 173 regions and omits
+  // city-states, so shading alone drops ~9.7% of events here -- Singapore,
+  // the third-largest source, among them. The markers carry the real data.
+  var MAP_MARKERS = 60;
+  var MAP_TIERS = [
+    { key: "t5", min: 10000, label: "10k+" },
+    { key: "t4", min: 1000, label: "1k-10k" },
+    { key: "t3", min: 100, label: "100-1k" },
+    { key: "t2", min: 10, label: "10-100" },
+    { key: "t1", min: 0, label: "<10" },
+  ];
+  var MAP_SCALE = { t1: "#cfe2ff", t2: "#9ec5fe", t3: "#6ea8fe", t4: "#3d8bfd", t5: "#0a58ca" };
+  var mapInstance = null, mapMarkerMeta = [], mapLastStats = null;
+
+  function tierOf(n) {
+    for (var i = 0; i < MAP_TIERS.length; i++) {
+      if (n >= MAP_TIERS[i].min) return MAP_TIERS[i].key;
+    }
+    return "t1";
+  }
+
+  function renderMap(s) {
+    if (typeof jsVectorMap === "undefined") return;
+    mapLastStats = s;
+    var cs = (s.countries || []).filter(function (c) { return c.lat !== null && c.lon !== null; });
+    var sensor = s.sensor || {};
+    var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+
+    var values = {}, maxN = 1;
+    (s.countries || []).forEach(function (c) {
+      values[c.cc] = tierOf(c.n);
+      if (c.n > maxN) maxN = c.n;
+    });
+
+    var markers = [], meta = [];
+    cs.slice(0, MAP_MARKERS).forEach(function (c) {
+      // sqrt so area tracks volume; a linear radius lets the top source
+      // (450k vs single digits here) swamp everything else.
+      var r = 3 + 11 * Math.sqrt(c.n / maxN);
+      markers.push({ name: c.cc, coords: [c.lat, c.lon],
+                     style: { initial: { r: r, fill: "#0d6efd", fillOpacity: 0.5,
+                                         stroke: "#0d6efd", strokeWidth: 1 } } });
+      meta.push(c.name + " \u2014 " + c.n.toLocaleString() + " events, " +
+                c.actors.toLocaleString() + " actors");
+    });
+    if (typeof sensor.lat === "number" && typeof sensor.lon === "number") {
+      markers.push({ name: "sensor", coords: [sensor.lat, sensor.lon],
+                     style: { initial: { r: 7, fill: "#198754", fillOpacity: 1,
+                                         stroke: "#ffffff", strokeWidth: 2 } } });
+      meta.push("This sensor \u2014 " + (sensor.name || sensor.cc || "location unset"));
+    }
+    mapMarkerMeta = meta;
+
+    if (mapInstance) { try { mapInstance.destroy(); } catch (e) {} mapInstance = null; arcLive = 0; }
+    document.getElementById("map-world").innerHTML = "";
+
+    mapInstance = new jsVectorMap({
+      selector: "#map-world",
+      map: "world",
+      zoomButtons: true,
+      backgroundColor: "transparent",
+      regionStyle: {
+        initial: { fill: dark ? "#343a40" : "#dee2e6", stroke: dark ? "#212529" : "#ced4da",
+                   strokeWidth: 0.4, fillOpacity: 1 },
+        hover: { fillOpacity: 0.75, cursor: "pointer" },
+      },
+      series: { regions: [{ attribute: "fill", scale: MAP_SCALE, values: values }] },
+      markers: markers,
+      // tooltip.text(str) writes textContent; a second argument of true would
+      // switch it to innerHTML. Never pass it. Country names come from our own
+      // table today, but this is the sink that would matter if anything
+      // attacker-controlled is ever shown here.
+      onRegionTooltipShow: function (event, tooltip, code) {
+        var c = null;
+        (s.countries || []).forEach(function (x) { if (x.cc === code) c = x; });
+        tooltip.text(c ? c.name + " \u2014 " + c.n.toLocaleString() + " events, " +
+                          c.actors.toLocaleString() + " actors"
+                       : code + " \u2014 no traffic");
+      },
+      onMarkerTooltipShow: function (event, tooltip, index) {
+        tooltip.text(mapMarkerMeta[index] || "");
+      },
+    });
+
+    var t = s.totals || {};
+    var unknown = s.countries_unknown_events || 0;
+    var located = (t.events || 0) - unknown;
+    document.getElementById("mapmeta").textContent =
+      (t.countries_seen || 0) + " countries \u00b7 " +
+      (t.events ? (100 * located / t.events).toFixed(2) : "0") + "% of events located" +
+      (unknown ? " \u00b7 " + unknown.toLocaleString() + " unlocatable" : "");
+  }
+
+  // ---- live arcs -------------------------------------------------------
+  // recent.json is refreshed every 10s by hp-recent.timer. Each arc is one
+  // real arrival that actually happened -- the feed is a tail of the capture,
+  // not a synthesis from aggregates. Arrivals already seen are not redrawn,
+  // so nothing loops forever pretending to be live.
+  var ARC_POLL_MS = 10000;
+  var ARC_LIFE_MS = 2600;
+  var ARC_MAX_CONCURRENT = 40;   // stroke-dashoffset repaints; keep it bounded
+  var seenArrivals = {};
+  var arcLive = 0;
+  var arcsPrimed = false;
+
+  function arcKey(e) { return e.t + "|" + e.ip; }
+
+  function drawArc(e, sensor) {
+    if (!mapInstance || arcLive >= ARC_MAX_CONCURRENT) return;
+    var svg = document.querySelector("#map-world svg");
+    if (!svg) return;
+    var from, to;
+    try {
+      // coordsToPoint(lat, lng) -- verified against rendered marker positions.
+      // Reversed, it returns false for any |lon| > 90 and the arc silently
+      // never draws, which looks like "the animation is flaky".
+      from = mapInstance.coordsToPoint(e.lat, e.lon);
+      to = mapInstance.coordsToPoint(sensor.lat, sensor.lon);
+    } catch (err) { return; }
+    if (!from || !to) return;
+
+    // quadratic arc bowed perpendicular to the path, so long hops curve more
+    var mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
+    var dx = to.x - from.x, dy = to.y - from.y;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var bow = Math.min(len * 0.28, 90);
+    var cx = mx - (dy / len) * bow, cy = my + (dx / len) * bow;
+
+    var ns = "http://www.w3.org/2000/svg";
+    var path = document.createElementNS(ns, "path");
+    path.setAttribute("d", "M" + from.x + "," + from.y + " Q" + cx + "," + cy + " " + to.x + "," + to.y);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", e.named ? CLASS_COLOR.bait : "#0dcaf0");
+    path.setAttribute("stroke-width", e.named ? 2.2 : 1.2);
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("opacity", e.named ? 0.95 : 0.55);
+    path.setAttribute("pointer-events", "none");
+    svg.appendChild(path);
+
+    var total = path.getTotalLength();
+    path.setAttribute("stroke-dasharray", total);
+    path.setAttribute("stroke-dashoffset", total);
+    path.style.transition = "stroke-dashoffset " + ARC_LIFE_MS + "ms linear, opacity 600ms ease-in " +
+                            (ARC_LIFE_MS - 600) + "ms";
+    arcLive++;
+    requestAnimationFrame(function () {
+      path.setAttribute("stroke-dashoffset", "0");
+      path.style.opacity = "0";
+    });
+    setTimeout(function () {
+      if (path.parentNode) path.parentNode.removeChild(path);
+      arcLive--;
+    }, ARC_LIFE_MS + 100);
+  }
+
+  function loadRecent() {
+    if (!mapLastStats || !mapInstance) return;
+    var sensor = (mapLastStats.sensor) || {};
+    if (typeof sensor.lat !== "number") return;
+    fetch("recent.json?" + Date.now()).then(function (r) { return r.json(); }).then(function (d) {
+      var events = d.events || [];
+      // First poll only records what is already there. Without this the map
+      // would replay the last 120 arrivals in one burst on every page load and
+      // look like a flood that never happened.
+      if (!arcsPrimed) {
+        events.forEach(function (e) { seenArrivals[arcKey(e)] = 1; });
+        arcsPrimed = true;
+        return;
+      }
+      var fresh = events.filter(function (e) { return !seenArrivals[arcKey(e)]; });
+      fresh.forEach(function (e) { seenArrivals[arcKey(e)] = 1; });
+      // stagger so a batch of arrivals does not all fire on the same frame
+      fresh.slice(-ARC_MAX_CONCURRENT).forEach(function (e, i) {
+        setTimeout(function () { drawArc(e, sensor); }, i * 140);
+      });
+      var keys = Object.keys(seenArrivals);
+      if (keys.length > 600) keys.slice(0, keys.length - 600).forEach(function (k) { delete seenArrivals[k]; });
+    }).catch(function () { /* the feed is optional; the map still stands */ });
+  }
+
+  function render(s) {
+    var t = s.totals;
+    document.getElementById("sub").textContent = "generated " + s.generated + " · since " + (s.window_start || "—");
+
+    document.getElementById("tiles").innerHTML =
+      tile("events", t.events) + tile("tcp", t.tcp) + tile("web", t.web) +
+      tile("unique IPs", t.unique_ips) + tile("tls", t.tls) +
+      tile("novel 24h", t.novel_24h, "text-warning-emphasis") +
+      tile("contacts", t.contacts, "text-danger-emphasis") +
+      tile("contacts 24h", t.contacts_24h, "text-danger-emphasis");
+
+    // Notification bell: real Contacts, not a fake fixed list.
+    var badge = document.getElementById("contact-badge");
+    if (t.contacts_24h > 0) { badge.hidden = false; badge.textContent = t.contacts_24h; }
+    else badge.hidden = true;
+    var recent = (s.contacts || []).slice(0, 5);
+    document.getElementById("contact-feed").innerHTML = recent.length
+      ? recent.map(function (c) {
+          return '<li><span class="dropdown-item-text py-1"><span class="font-monospace small d-block">' +
+            esc(c.ip) + " → " + esc(c.name) + '</span><span class="text-secondary" style="font-size:.72rem">' +
+            esc(c.first) + "</span></span></li>";
+        }).join("")
+      : '<li><span class="dropdown-item-text text-secondary small">none yet</span></li>';
+
+    renderMap(s);
+
+    // --- chart 1: Events vs Contacts per hour, with a time-range picker ---
+    LAST_HOURLY = s.hourly || [];
+    LAST_CONTACTS_HOURLY = s.contacts_hourly || [];
+    renderEventsChart();
+
+    // --- chart 2: Names by class ---
+    var byClass = { bait: 0, control: 0, foreign: 0, derived: 0 };
+    (s.hosts || []).forEach(function (h) { byClass[h.class] = (byClass[h.class] || 0) + h.n; });
+    var classLabels = Object.keys(byClass).filter(function (k) { return byClass[k] > 0; });
+    upsertChart("chart-classes", {
+      chart: { type: "donut", height: 260, animations: { enabled: false } },
+      series: classLabels.map(function (k) { return byClass[k]; }),
+      labels: classLabels,
+      colors: classLabels.map(function (k) { return CLASS_COLOR[k]; }),
+      legend: { position: "bottom" },
+    });
+
+    // --- chart 3: Top ports ---
+    var ports = (s.top_ports || []).slice(0, 10);
+    upsertChart("chart-ports", {
+      chart: { type: "bar", height: 220, toolbar: { show: false }, animations: { enabled: false } },
+      series: [{ name: "hits", data: ports.map(function (p) { return p.n; }) }],
+      xaxis: { categories: ports.map(function (p) { return String(p.port); }) },
+      plotOptions: { bar: { borderRadius: 3, columnWidth: "55%" } },
+      colors: ["#0d6efd"],
+      dataLabels: { enabled: false },
+    });
+
+    document.getElementById("novelmeta").textContent = "showing " + s.novel.length + " of " + t.novel_24h;
+    document.getElementById("novel").innerHTML = s.novel.length
+      ? s.novel.map(function (n) {
+          return '<div class="border-bottom py-2"><div class="font-monospace small text-break">' + esc(n.sample) +
+            '</div><div class="text-secondary" style="font-size:.72rem">' + esc(n.first) + " · seen " + n.n + "×</div></div>";
+        }).join("")
+      : '<p class="text-secondary small mb-0">nothing new</p>';
+
+    document.getElementById("contactmeta").textContent =
+      "showing " + s.contacts.length + " of " + t.contacts + " · " + t.unique_ips + " actors total";
+    setTableData("contacts", s.contacts,
+      [{k:"ip",mono:1,label:"Actor"},{k:"name",mono:1,label:"Name"},{k:"class",cls:1,label:"Class"},
+       {k:"first",mono:1,label:"First seen"},{k:"n",num:1,label:"Requests"}]);
+    setTableData("hosts", s.hosts,
+      [{k:"host",mono:1,label:"Name"},{k:"class",cls:1,label:"Class"},{k:"n",num:1,label:"Requests"}]);
+    setTableData("topports", s.top_ports, [{k:"port",mono:1,label:"Port"},{k:"n",num:1,label:"Hits"}]);
+    setTableData("topips", s.top_ips, [{k:"ip",mono:1,label:"Actor"},{k:"n",num:1,label:"Hits"}]);
+    setTableData("toppaths", s.top_paths, [{k:"path",mono:1,label:"Path"},{k:"n",num:1,label:"Hits"}]);
+    setTableData("uas", s.top_agents, [{k:"ua",label:"User agent"},{k:"n",num:1,label:"Hits"}]);
+    setTableData("creds", s.credentials, [{k:"user",mono:1,label:"Username"},{k:"n",num:1,label:"Times seen"}]);
+  }
+
+  function load() {
+    fetch("stats.json?" + Date.now()).then(function (r) { return r.json(); }).then(render).catch(function (e) {
+      // The subtitle is the only place a failed load is reported now, so it
+      // has to survive: writing to an element that no longer exists would
+      // throw inside the handler and swallow the message entirely.
+      var sub = document.getElementById("sub");
+      if (sub) sub.textContent = "stats.json unavailable: " + e;
+    });
+  }
+  load();
+  setInterval(load, 60000);
+  setInterval(loadRecent, ARC_POLL_MS);
+})();
+</script>
+</body>
+</html>

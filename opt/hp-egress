@@ -1,0 +1,7 @@
+#!/bin/sh
+# ponytail: toggle only, no state file. Re-apply /etc/nftables.conf to close.
+case "$1" in
+  open)  nft add rule inet fw output tcp dport { 80, 443 } accept && echo "egress OPEN 80,443" ;;
+  close) nft -f /etc/nftables.conf && echo "egress CLOSED" ;;
+  *)     nft list chain inet fw output ;;
+esac

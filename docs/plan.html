@@ -1,0 +1,480 @@
+<title>Zero-Day Capture Honeypot</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+  :root {
+    --ground:      #EEF1F4;
+    --surface:     #F8FAFB;
+    --surface-2:   #E3E8ED;
+    --ink:         #131920;
+    --ink-2:       #4A5560;
+    --ink-3:       #6E7A86;
+    --rule:        #CBD3DA;
+    --rule-soft:   #DDE3E8;
+    --signal:      #A45B06;
+    --signal-bg:   #F6E9D6;
+    --danger:      #96261F;
+    --danger-bg:   #F3DFDC;
+    --ok:          #1F6046;
+    --code-bg:     #E7ECF0;
+    --shadow:      0 1px 0 rgba(19,25,32,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #0E1216;
+      --surface:   #161B21;
+      --surface-2: #1E252C;
+      --ink:       #E6EBEF;
+      --ink-2:     #A7B2BC;
+      --ink-3:     #7C8894;
+      --rule:      #2B333B;
+      --rule-soft: #222931;
+      --signal:    #E0A153;
+      --signal-bg: #2E2214;
+      --danger:    #E38279;
+      --danger-bg: #2E1A17;
+      --ok:        #6BBF97;
+      --code-bg:   #1A2027;
+      --shadow:    none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:    #0E1216;
+    --surface:   #161B21;
+    --surface-2: #1E252C;
+    --ink:       #E6EBEF;
+    --ink-2:     #A7B2BC;
+    --ink-3:     #7C8894;
+    --rule:      #2B333B;
+    --rule-soft: #222931;
+    --signal:    #E0A153;
+    --signal-bg: #2E2214;
+    --danger:    #E38279;
+    --danger-bg: #2E1A17;
+    --ok:        #6BBF97;
+    --code-bg:   #1A2027;
+    --shadow:    none;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-size: 16.5px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 20px 96px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  /* masthead */
+  .masthead { padding: 56px 0 28px; border-bottom: 2px solid var(--ink); }
+  .kicker {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--signal); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+    font-weight: 700; font-size: clamp(38px, 7vw, 58px); line-height: 1.02;
+    letter-spacing: -.015em; margin: 0 0 16px; text-wrap: balance;
+  }
+  .standfirst { font-size: 18px; color: var(--ink-2); margin: 0 0 22px; max-width: 60ch; }
+  .facts {
+    display: flex; flex-wrap: wrap; gap: 0 34px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px;
+    color: var(--ink-3); padding-bottom: 4px;
+  }
+  .facts b { color: var(--ink); font-weight: 500; }
+
+  h2 {
+    font-family: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+    font-weight: 600; font-size: 27px; letter-spacing: -.01em;
+    margin: 54px 0 4px; text-wrap: balance;
+  }
+  h3 {
+    font-family: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+    font-weight: 600; font-size: 18px; margin: 30px 0 6px; letter-spacing: -.005em;
+  }
+  p { margin: 0 0 16px; }
+  a { color: var(--signal); }
+  strong { font-weight: 600; }
+
+  .sec-rule {
+    border: 0; border-top: 1px solid var(--rule);
+    margin: 0 0 20px;
+  }
+
+  /* phase heading with number in the gutter */
+  .phase { display: grid; grid-template-columns: 62px 1fr; gap: 0 16px; align-items: baseline; margin: 56px 0 4px; }
+  .phase .n {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .1em; color: var(--signal);
+    border-top: 2px solid var(--signal); padding-top: 8px; text-transform: uppercase;
+  }
+  .phase h2 { margin: 0; }
+  .phase + .sec-rule { margin-top: 14px; }
+  @media (max-width: 620px) {
+    .phase { grid-template-columns: 1fr; gap: 6px; }
+    .phase .n { justify-self: start; padding-right: 40px; }
+  }
+
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--ink-3); }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .86em; background: var(--code-bg); padding: 1px 5px;
+    border-radius: 2px; color: var(--ink);
+  }
+  pre {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink-3);
+    padding: 14px 16px; overflow-x: auto; font-size: 12.6px; line-height: 1.6;
+    margin: 0 0 18px; color: var(--ink);
+  }
+  pre code { background: none; padding: 0; font-size: 1em; }
+  .cap {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 7px;
+  }
+
+  /* danger slab — deliberately not a card */
+  .slab {
+    background: var(--danger-bg); color: var(--ink);
+    padding: 20px 22px; margin: 26px 0 22px;
+    border-top: 3px solid var(--danger);
+  }
+  .slab h3 { margin-top: 0; color: var(--danger); }
+  .slab ul { margin-bottom: 0; }
+  .slab.signal { background: var(--signal-bg); border-top-color: var(--signal); }
+  .slab.signal h3 { color: var(--signal); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  .scroll { overflow-x: auto; margin: 0 0 20px; }
+  th, td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th {
+    font-family: "IBM Plex Sans Condensed", sans-serif; font-weight: 600;
+    font-size: 12px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ink-3); border-bottom: 1px solid var(--rule);
+  }
+  td code { white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+
+  /* one-way pipeline strip */
+  .flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin: 6px 0 20px; }
+  .flow .node {
+    flex: 1 1 108px; background: var(--surface); border: 1px solid var(--rule);
+    padding: 10px 12px; box-shadow: var(--shadow);
+  }
+  .flow .node .t {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11.5px;
+    color: var(--ink); display: block;
+  }
+  .flow .node .s {
+    font-family: "IBM Plex Sans Condensed", sans-serif; font-size: 11px;
+    letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
+  }
+  .flow .arw { align-self: center; color: var(--signal); font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .flow .node.isolated { border-style: dashed; border-color: var(--danger); }
+
+  .tag {
+    font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10.5px;
+    letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px;
+    border: 1px solid currentColor; color: var(--ink-3); white-space: nowrap;
+  }
+  .tag.now  { color: var(--ok); }
+  .tag.built { color: var(--ok); }
+  .tag.blocked { color: var(--danger); }
+  .tag.next { color: var(--signal); }
+  .tag.later{ color: var(--ink-3); }
+
+  footer {
+    margin-top: 60px; padding-top: 18px; border-top: 1px solid var(--rule);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px; color: var(--ink-3);
+  }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="kicker">Build plan · offensive research infrastructure</p>
+  <h1>Zero-Day Capture Honeypot</h1>
+  <p class="standfirst">An internet-facing sensor that logs every port, serves a plausible internal admin surface, and runs real vulnerable appliances so an in-the-wild exploit actually fires and leaves evidence. Phases 0 through 2 are built and collecting; phase 3 is held back for want of an isolation layer.</p>
+  <div class="facts">
+    <span>Host <b>set at deploy</b></span>
+    <span>Root <b>/opt/honeypot</b></span>
+    <span>SSH <b>61022, key only</b></span>
+    <span>Status <b>phases 0&#8211;2 live</b></span>
+  </div>
+</header>
+
+<h2>Where it stands</h2>
+<hr class="sec-rule">
+<p>Built on 9 September 2026. The catch-all listener, the decoy web surface and the rollup pipeline are running as systemd units and survive reboot. First six minutes of exposure: 81 connections, 38 unique sources, 20 distinct ports.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Piece</th><th>Unit</th><th>Where</th><th>State</th></tr></thead>
+  <tbody>
+    <tr><td>Catch-all listener</td><td><code>hp-catchall</code></td><td><code>:8000</code>, all ports redirected</td><td>live</td></tr>
+    <tr><td>Decoy backend</td><td><code>hp-shim</code></td><td><code>127.0.0.1:8099</code></td><td>live</td></tr>
+    <tr><td>Bait web surface</td><td><code>nginx</code></td><td><code>:80</code>, <code>:443</code></td><td>live</td></tr>
+    <tr><td>Rollup</td><td><code>hp-rollup.timer</code></td><td>every 5 min</td><td>live</td></tr>
+    <tr><td>Operator panel</td><td><code>hp-ops</code></td><td><code>127.0.0.1:8085</code></td><td>live</td></tr>
+    <tr><td>Firewall</td><td><code>nftables</code></td><td><code>/etc/nftables.conf</code></td><td>live, egress denied</td></tr>
+    <tr><td>Real appliance</td><td>&#8212;</td><td>&#8212;</td><td>not built</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="cap">day to day</p>
+<pre><code>ssh honeypot                                    # key-only, port 61022
+ssh -fN -L 8085:127.0.0.1:8085 honeypot         # then open http://127.0.0.1:8085
+hp-egress open &amp;&amp; apt-get update &amp;&amp; hp-egress close
+systemctl status hp-catchall hp-shim hp-ops
+python3 /opt/honeypot/ops/rollup.py             # force a refresh</code></pre>
+
+<p>Each of the three Python programs carries a <code>--demo</code> self-check that runs offline with no sockets. All three pass.</p>
+
+<h2>What it is for</h2>
+<hr class="sec-rule">
+<p>Two goals that pull in opposite directions, so they get built as two tiers on one box rather than blended into one confused service.</p>
+
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Tier</th><th>Question it answers</th><th>Cost</th><th>Risk</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>1 · Catch-all</b></td>
+      <td>What ports and payloads is the internet probing that I did not know existed?</td>
+      <td>An evening</td>
+      <td>Near zero — nothing executes</td>
+    </tr>
+    <tr>
+      <td><b>2 · Real appliance</b></td>
+      <td>Is someone burning an unpublished exploit on this product right now?</td>
+      <td>Days, plus a VM host</td>
+      <td>High — the box is meant to be owned</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Tier 1 catches volume and novelty. Tier 2 catches intent. A static fake page catches neither, because a zero-day fired at static HTML returns a 200 and produces no signal at all. That is the whole reason the plan escalates past bait.</p>
+
+<div class="slab">
+  <h3>Non-negotiables</h3>
+  <ul>
+    <li><b>Nothing shared with hunting infrastructure.</b> Own domain, own key, own account. No repo access, no credentials that work anywhere else, nothing that identifies the operator.</li>
+    <li><b>Egress default-deny.</b> Allow only the log sink and DNS. Outbound 25 stays blocked or the provider null-routes the host within days.</li>
+    <li><b>Cloud metadata blocked.</b> Drop <code>169.254.169.254</code> at the firewall before anything listens.</li>
+    <li><b>The password in chat is now burned.</b> Install a key, disable password auth, rotate the root password as the first action on the box.</li>
+    <li><b>Collect only what arrives.</b> No counter-probing sources. Harvested credentials are counted, never reused. No personal data leaves the box.</li>
+  </ul>
+</div>
+
+<div class="phase"><span class="n">Phase 0</span><h2>Take the box safely <span class="tag built">built</span></h2></div>
+<hr class="sec-rule">
+<p>Every later phase redirects all TCP traffic into a honeypot listener. If SSH is still on 22 when that rule loads, access to the host is gone permanently. Relocate it and prove the new port works before touching anything else.</p>
+<ol>
+  <li>Dedicated key installed, password authentication disabled, root password rotated. The key is used for this host only.</li>
+  <li>sshd moved to 61022 through a drop-in under <code>/etc/ssh/sshd_config.d/</code>, with port 22 kept alive until the new port was proven, then dropped.</li>
+  <li>nftables baseline: inbound accept, which the honeypot needs, and outbound default-drop with loopback, established, DNS, NTP and ping allowed. Verified from the box that outbound HTTPS fails, DNS resolves, the metadata address is unreachable and outbound 25 is blocked.</li>
+  <li>Still outstanding: a provider-side snapshot of the clean state, which cannot be taken from inside the guest.</li>
+</ol>
+
+<div class="slab">
+  <h3>The lockout this prevents is not hypothetical</h3>
+  <p>The first attempt at this box ran <code>ssh.socket</code> alongside a live <code>ssh.service</code>. Restarting the socket handed port 22 to the socket-activated path, whose per-connection sshd died immediately on that image. Connections were accepted and then closed before the banner, on both the old and the new port, and the box had to be rebuilt. Both risky steps in the rebuild ran behind a timed auto-rollback that was cancelled only after access was re-verified.</p>
+</div>
+
+<div class="phase"><span class="n">Phase 1</span><h2>All-port catch-all <span class="tag built">built</span></h2></div>
+<hr class="sec-rule">
+<p>Sixty-five thousand ports, one socket. Emulating services is not the job; recording what arrives is. A NAT rule redirects every TCP port except SSH into a single listener, which recovers the port the attacker actually aimed at and logs the opening bytes.</p>
+
+<p class="cap">/etc/nftables.conf — as deployed</p>
+<pre><code>table ip nat {
+  chain prerouting {
+    type nat hook prerouting priority dstnat; policy accept;
+    iif "lo" return
+    tcp dport { 61022, 80, 443, 8000 } return
+    tcp dport 1-65535 redirect to :8000
+  }
+}</code></pre>
+
+<p>The listener reads the original destination with <code>SO_ORIGINAL_DST</code>, records peer address, intended port, byte count and the first four kilobytes, then closes. About a hundred and eighty lines of standard library Python, no framework, no dependency. Connections beyond three hundred concurrent are dropped rather than queued.</p>
+
+<h3>The server-speaks-first problem</h3>
+<p>HTTP, TLS, Redis and Memcached send data immediately, so their payloads arrive for free. SSH, SMTP, FTP, MySQL and POP3 wait for a banner and give nothing if none comes. Fix it with a wait, not with emulation: stay silent 1.5 seconds, and if the client has not spoken, emit a banner from a small port-to-banner map, currently fifteen entries covering FTP, SSH, Telnet, SMTP, POP3, IMAP, MySQL, VNC and friends, then log the response. That one map converts dead connections into complete attack samples.</p>
+
+<h3>TLS</h3>
+<p>A large share of interesting traffic is wrapped. First byte <code>0x16</code> hands the connection to a terminator with a self-signed certificate, and the plaintext is logged behind it. The bonus is a JA4 fingerprint per connection, which identifies the attacker's tooling — often more useful than the payload itself, because one fingerprint across many ports is a sweep while one fingerprint on one strange port is a targeted probe.</p>
+
+<div class="slab">
+  <h3>UDP is log-only, permanently</h3>
+  <p>Capture with a packet ring buffer and reply to nothing. Any UDP response turns the host into a DDoS reflector — DNS, NTP, memcached and SSDP amplification all start with a honeypot that answered politely.</p>
+</div>
+
+<div class="phase"><span class="n">Phase 2</span><h2>Web surface and the decoy console <span class="tag built">built</span></h2></div>
+<hr class="sec-rule">
+<p>Ports 80 and 443 come off the catch-all and get their own stack, because web is where payload variety lives. Nginx logs structured JSON per request, including the body.</p>
+
+<p class="cap">nginx log format</p>
+<pre><code>log_format hp escape=json '{"t":"$time_iso8601","ip":"$remote_addr","m":"$request_method",'
+  '"u":"$request_uri","h":"$http_host","ua":"$http_user_agent","ref":"$http_referer",'
+  '"xff":"$http_x_forwarded_for","ct":"$http_content_type","len":$request_length,'
+  '"body":"$request_body"}';</code></pre>
+
+<h3>The login accepts anything</h3>
+<p>Commodity scanners stop at a wall. The value of an admin-panel decoy is the traffic after the wall — object references, traversal attempts, template fields, webhook URLs. So any POST to the login sets a session cookie and redirects to the dashboard, with no credential check and nothing executing. Submitted credentials are logged as their own corpus.</p>
+
+<h3>The shell</h3>
+<p>Built on <a href="https://github.com/puikinsh/Bootstrap-Admin-Template">Bootstrap Admin Template</a>. It ships as Vite sources rather than flat HTML, so it needed Node 22 and a real build; the toolchain was then deleted from the host, leaving 3.4 MB of static output. Four changes turn it into a decoy:</p>
+<ul>
+  <li><b>Self-host every asset.</b> Strip the content-delivery and font references so the panel does not phone out and does not break when egress is denied.</li>
+  <li><b>Remove the template identity.</b> Its own name, demo links and author credits are what make a panel read as scenery. Rename the product, shift the palette, rewrite the navigation labels toward a security console.</li>
+  <li><b>Keep the charts, hardcode the data.</b> They ship with static arrays already. Fake event counts and fake internal host names, never real infrastructure and never a real company.</li>
+  <li><b>Delete every script that fetches.</b> The panel must be inert HTML, CSS and rendering JavaScript only.</li>
+</ul>
+
+<h3>Bait surface</h3>
+<p>The decoy presents as an internal security console: fake event tables, fake host names, a static chart. It is attractive precisely because an attacker who lands on a monitoring panel assumes high value and spends real effort. Every path advertises an attack shape, and the parameter mutations are the product.</p>
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Path</th><th>Invites</th></tr></thead>
+  <tbody>
+    <tr><td><code>/dashboard/events?id=8841</code></td><td>Object reference tampering, SQL injection</td></tr>
+    <tr><td><code>/dashboard/export?file=events.csv</code></td><td>Path traversal, local file inclusion</td></tr>
+    <tr><td><code>/dashboard/integrations</code></td><td>Server-side request forgery, via a webhook URL field</td></tr>
+    <tr><td><code>/dashboard/rules</code></td><td>Template injection, via an alert-template field</td></tr>
+    <tr><td><code>/api/v1/openapi.json</code></td><td>Shadow-API enumeration</td></tr>
+    <tr><td><code>/dashboard/upload</code></td><td>Upload chains, polyglot files</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Every response is static. In particular the template-injection bait must have no template engine behind it, and the upload endpoint must never write to a served path. The decoy is scenery with instrumentation, not an application.</p>
+
+<div class="slab">
+  <h3>Two rules on the decoy</h3>
+  <ul>
+    <li><b>Generic branding only.</b> Never clone a real company's admin interface, name or logo. That is impersonation regardless of intent.</li>
+    <li><b>The decoy never reads real data.</b> One symlink into the log directory hands attackers the operator's own addresses and targets. Separate process, separate root, one-way data flow.</li>
+  </ul>
+</div>
+
+<div class="phase"><span class="n">Phase 3</span><h2>Real appliance, instrumented <span class="tag blocked">blocked</span></h2></div>
+<hr class="sec-rule">
+<p>This is the tier that can catch an unpublished exploit, and it works by running the genuine product and letting it fall. Candidates are whatever is currently being hit: Ivanti Connect Secure, Citrix NetScaler, Fortinet, Palo Alto GlobalProtect, SonicWall, Confluence, Jenkins, GitLab, vCenter. Start with two or three, never twenty.</p>
+
+<h3>The signal is post-exploitation</h3>
+<p>A zero-day request looks like ordinary traffic, so watching the wire alone proves nothing. The evidence comes from inside the guest:</p>
+<ul>
+  <li>Kernel-level tracing on process execution, file writes and outbound connections.</li>
+  <li>Full packet capture with TLS keys logged, so the session preceding an execution event can be read in plaintext.</li>
+  <li>Snapshot and revert on a timer. Each snapshot diff is a self-contained evidence package.</li>
+</ul>
+
+<h3>Telling a zero-day from an N-day</h3>
+<p>The test is exploitation that succeeded while matching no known signature for that product version. Maintaining a signature set for the known bugs is what makes the novel case surface by exclusion — otherwise every hit looks new.</p>
+
+<h3>Discovery</h3>
+<p>These attackers scan by product fingerprint, so appearing on internet-wide scan data with a genuine appliance banner is enough. A plausible hostname and a certificate in the transparency logs accelerate it.</p>
+
+<div class="slab">
+  <h3>Blocked, and why it stays blocked here</h3>
+  <p>Compromise is the intended outcome, so the guest needs an isolation layer that this host cannot provide. Two virtual CPUs, 3.8 GB of memory and no nested virtualization, which means a container escape lands directly on the machine holding the capture logs and the operator panel. This phase needs either a second box that runs nothing but the guest, or a provider offering nested virtualization with snapshot and revert. Until then every containment rule from Phase 0 is holding a decoy that executes nothing, which is a much easier promise to keep.</p>
+</div>
+
+<div class="phase"><span class="n">Pipeline</span><h2>One direction, never back</h2></div>
+<hr class="sec-rule">
+
+<div class="flow">
+  <div class="node"><span class="s">capture</span><span class="t">nginx · listener · guest</span></div>
+  <span class="arw">&#8594;</span>
+  <div class="node"><span class="s">raw</span><span class="t">logs/hp.jsonl</span></div>
+  <span class="arw">&#8594;</span>
+  <div class="node"><span class="s">rollup</span><span class="t">jq · cron 5m</span></div>
+  <span class="arw">&#8594;</span>
+  <div class="node"><span class="s">operator</span><span class="t">127.0.0.1:8085</span></div>
+</div>
+<div class="flow">
+  <div class="node isolated"><span class="s">isolated</span><span class="t">bait/ — static, never written at runtime, never reads logs</span></div>
+</div>
+
+<p class="cap">layout</p>
+<pre><code>/opt/honeypot/
+  catchall.py       SO_ORIGINAL_DST listener, banner map, TLS split   [hp-catchall]
+  shim.py           any POST /login -> cookie -> 302, fake API JSON   [hp-shim]
+  hp.pem            self-signed cert for the TLS terminator
+  bait/             static decoy — no runtime writes, no log access
+  logs/hp.jsonl     catch-all writes; nothing else touches it
+  logs/web.jsonl    nginx writes, JSON access log including bodies
+  ops/rollup.py     logs -> ops/stats.json, read-only    [hp-rollup.timer]
+  ops/stats.json    the rollup output
+  ops/index.html    operator panel, loopback only        [hp-ops :8085]
+
+/etc/nginx/sites-available/honeypot   bait site, 404 -> 200, POST -> shim
+/etc/nftables.conf                    egress deny + all-port redirect
+/usr/local/sbin/hp-egress             open | close the outbound window</code></pre>
+
+<h3>Operator panel</h3>
+<p>Bound to loopback and reached over an SSH forward, never exposed. No database and no server framework: a systemd timer runs the rollup into a JSON file, and one static page renders it with hand-written SVG bars. The rollups that matter are the ones about novelty, not volume.</p>
+<ul>
+  <li><b>First-seen port.</b> A port that never appeared before, appearing now, is the signal being hunted.</li>
+  <li><b>First-seen payload shape</b> per port, normalized so that hex, identifiers and timestamps are stripped — novel structure, not novel randomness.</li>
+  <li><b>Port against payload.</b> A familiar exploit body arriving on an unexpected port means someone found the service on a nonstandard deployment.</li>
+  <li><b>Fingerprint against payload.</b> Separates broad sweeps from targeted probes.</li>
+  <li><b>Execution events</b> from Phase 3, joined to the session that caused them.</li>
+</ul>
+
+<div class="phase"><span class="n">Analysis</span><h2>Rules do the work, the model reads the residue</h2></div>
+<hr class="sec-rule">
+<p>The output is roughly ninety-nine percent repeated commodity noise. Deduplicate and normalize first and the daily unique set collapses to tens of samples, which is a readable quantity. Detection stays deterministic — first-seen port, first-seen shape, execution fired — because a counter that knows a thing is new beats a model that thinks it is interesting. Near-duplicate grouping is a similarity hash, not inference.</p>
+<p class="cap">first six minutes of exposure</p>
+<p>Eighty-one connections from thirty-eight sources across twenty ports, before the host appeared in any scan index. The novel feed already separated identified survey traffic, Palo Alto Cortex Xpanse and internet-measurement.com among them, from protocol probes worth reading: SIP OPTIONS sweeps, an MQTT CONNECT, a Kafka client handshake, RTSP, NTLMSSP negotiation and VNC option strings. That mix is the argument for the banner map. Most of those protocols say nothing until spoken to first.</p>
+
+<p>A language model earns its place on the residue only: the handful of daily samples that survive deduplication and match nothing. Asking what product speaks this protocol, what the payload is attempting, and whether it resembles a known vulnerability replaces twenty minutes of searching. It is also the right tool for attacking one's own conclusion before anything gets called a zero-day.</p>
+
+<div class="slab signal">
+  <h3>Honeypot data is attacker-controlled text</h3>
+  <p>Feeding captured payloads to a model is prompt injection aimed straight at the analysis pipeline. Model output prints to a report and nowhere else. It never triggers a command, a query, a fetch or an alert action.</p>
+</div>
+
+<div class="phase"><span class="n">Cadence</span><h2>Running it</h2></div>
+<hr class="sec-rule">
+<ul>
+  <li><b>Daily:</b> read the novel-payload feed. It should be short enough to eyeball with coffee.</li>
+  <li><b>Weekly:</b> check the port histogram. Promote at most the top three ports to real emulation, reusing existing honeypot projects rather than writing them.</li>
+  <li><b>On an execution event:</b> stop, pull the snapshot diff and the matching packet capture, and triage before reverting.</li>
+  <li><b>Monthly:</b> re-image. Long-lived honeypots accumulate other people's implants.</li>
+</ul>
+
+<h2>Where the build departed from this plan</h2>
+<hr class="sec-rule">
+<ul>
+  <li><b>A systemd timer replaced cron.</b> The crontab write went through without error and left an empty crontab. A timer is one file, and the rest of the system is already systemd units.</li>
+  <li><b>Python replaced jq for the rollup.</b> First-seen tracking and payload normalization are a few lines of Python and an ugly sprawl of jq. The log format is unchanged, so jq still works for ad-hoc queries.</li>
+  <li><b>The rollup re-reads both logs in full every run.</b> Fine at current volume, and the obvious thing to replace with offset tracking when a run stops finishing in a minute.</li>
+  <li><b>The redirect covers IPv4 only.</b> The box has a v4 address; add an equivalent <code>ip6 nat</code> table if a v6 address is ever assigned.</li>
+</ul>
+
+<h2>Deliberately not built</h2>
+<hr class="sec-rule">
+<p>Recorded so nobody rebuilds them out of habit. Interaction emulation beyond banners, a real-time dashboard, a database, alerting, geolocation and network-owner enrichment, packet-capture retention past triage, and machine-learning payload clustering. Each is added only when its absence is what actually blocks the work: emulation when a port shows sustained volume and truncation is losing the interesting half, clustering when the novel feed outgrows a daily read.</p>
+
+<footer>
+  Phases 0&#8211;2 live since 9 September 2026. Phase 3 waits on an isolation layer. Egress stays denied; open it only through hp-egress, and close it in the same command.
+</footer>
+
+</div>

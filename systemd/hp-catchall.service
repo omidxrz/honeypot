@@ -1,0 +1,15 @@
+[Unit]
+Description=Honeypot all-port catch-all listener
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/honeypot/catchall.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/honeypot/logs
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

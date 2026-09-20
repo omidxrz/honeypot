@@ -1,0 +1,15 @@
+# never commit: TLS private keys, captured data, generated output, third-party build
+*.pem
+*.key
+logs/
+ops/stats.json
+bait/
+node_modules/
+ops/assets/
+ops/state.json
+etc/nginx-hostmap.conf
+*.bak
+__pycache__/
+credentials.json
+etc/names.env
+ops/geo/
